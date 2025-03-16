@@ -1,10 +1,13 @@
+
+global _start 
+
 section .data
     msg_input_file db "Enter input file name: ", 0
     msg_output_file db "Enter output file name: ", 0
     msg_key db "Enter key (max. 3 characters): ", 0
     msg_reading_file db "Reading input file...OK", 10, 0
     msg_generating_file db "Generating output file...OK", 10, 0
-    msg_file_generated db "output.dat generated", 10, 0
+    msg_encrypt_generated db "encrypt.dat generated", 10, 0
 
 section .bss
     filename resb 100        ; ตัวแปรสำหรับเก็บชื่อไฟล์ input
@@ -16,8 +19,6 @@ section .bss
     output_encrypt resq 1    ; ตัวแปรสำหรับเก็บค่า file descriptor ของไฟล์ output
 
 section .text
-    global _start
-
 _start:
     ; รับชื่อไฟล์ input
     mov rax, 1
@@ -27,6 +28,7 @@ _start:
     syscall   ; แสดงข้อความให้ผู้ใช้ป้อนชื่อไฟล์ input
 
     ; อ่านชื่อไฟล์ input
+read_file_input:
     mov rax, 0
     mov rdi, 0
     mov rsi, filename
@@ -69,6 +71,7 @@ _start:
     syscall
 
     ; รับ key สำหรับการเข้ารหัส
+read_key:
     mov rax, 1
     mov rdi, 1
     mov rsi, msg_key
@@ -93,6 +96,7 @@ _start:
     call xor_encrypt
 
     ; สร้างไฟล์ output และเขียนข้อมูลที่เข้ารหัส
+write_output_file:
     mov rax, 2
     mov rdi, output_filename
     mov rsi, 577         ; O_CREAT | O_WRONLY | O_TRUNC (0666)
@@ -117,7 +121,7 @@ _start:
     ; แสดงข้อความ "output.dat generated"
     mov rax, 1
     mov rdi, 1
-    mov rsi, msg_file_generated
+    mov rsi, msg_encrypt_generated
     mov rdx, 23
     syscall
 
@@ -127,6 +131,7 @@ _start:
     syscall
 
     ; ออกจากโปรแกรม
+exit:
     mov rax, 60
     xor rdi, rdi
     syscall
