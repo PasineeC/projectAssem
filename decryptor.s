@@ -1,10 +1,12 @@
-
-extern xor_encrypt
 global _start
 
 section .data
     LF equ 10 
     NULL equ 0
+    text1 db "hello", 0
+    text2 db "Cat", 0
+    len1 equ $-text1
+    len2 equ $-text2
     
     msg_input_file db "Enter input file name: ", 0
     msg_output_file db "Enter output file name: ", 0
@@ -19,41 +21,31 @@ section .data
 section .bss 
     filename resb 100        
     output_filename resb 100 
-    key resb 4               
-    buffer resb 100          
-    bytes_read resq 1        
-    input_encrypt resq 1     
-    output_encrypt resq 1    
+    key resb 4    
+    buffer resb 100 
+    xor_output resb 100    
+    buffer_len resq 1
+    key_len resq 1
 
 section .text
 _start:
-get_input:
-    mov rdi, msg_input_file
-    call printString 
+get_input_file:
 
-    ;read file name
-    mov rax, 0 ;SYS_read 
-    mov rdi, 0 ;STDIN 
-    mov rsi, buffer
-    mov rdx, 100  
-    syscall
+    mov rsi, msg_input_file
+    mov rdx, 24
+    call Sys_write
+
+    mov rsi, filename
+    call Sys_read
 
     ; Remove newline character (\n) if present
-    mov rcx, buffer
-remove_newline:
-    cmp byte [rcx], 10  
-    je set_null
-    cmp byte [rcx], 0   
-    je continue_open
-    inc rcx
-    jmp remove_newline
-set_null:
-    mov byte [rcx], 0
+    mov rcx, filename
+    call remove_newline
 
-continue_open:
+open_input_file:
     ;open file
     mov rax, 2 ;SYS_open
-    mov rdi, buffer 
+    mov rdi, filename
     mov rsi, 0 ;O_RDONLY
     syscall
     cmp rax, 0
@@ -64,53 +56,134 @@ continue_open:
     mov rax, 0 ;SYS_read
     mov rdi, r12
     mov rsi, buffer
-    mov rdx, 256
     syscall
+    mov [buffer_len], rax
     cmp rax, 0
     jl error_read
     mov r13, rax
-
-    call xor_encrypt
-
-    ;show file's data
-    mov rax, 1 ;SYS_write
-    mov rdi, 1 ;STDOUT
-    mov rsi, buffer
-    mov rdx, r13
-    syscall
 
     ;close file
     mov rax, 3 ;SYS_close
     mov rdi, r12
     syscall
 
+get_output_file:
+    mov rsi, msg_output_file
+    mov rdx, 25
+    call Sys_write
+
+    mov rsi, output_filename
+    call Sys_read
+
+get_key:
+    mov rsi, msg_key
+    mov rdx, 32
+    call Sys_write
+
+    mov rsi, key
+    call Sys_read
+
+    mov rcx, key 
+    call remove_newline
+
+xor_function:
+    mov rsi, buffer
+    mov rdi, key         
+    mov rdx, xor_output    
+    mov rcx, 0
+    mov r8, 0
+
+xor_loop:
+    cmp rcx, [buffer_len]       
+    jge xor_loop_done          
+
+    mov al, [rsi + rcx]    
+    cmp r8, 3
+    jge reset_key_index    
+
+    mov bl, [rdi + r8]  
+    xor al, bl             
+    mov [rdx + rcx], al    
+
+    inc rcx                
+    inc r8                 
+    jmp xor_loop      
+
+reset_key_index:
+    mov r8, 0
+    jmp xor_loop           
+
+xor_loop_done:
+
+write_output_file:
+    ;open file
+    mov rax, 85 ;SYS_create
+    mov rdi, output_filename
+    mov rsi, 00400q ;S_IRUSR
+    syscall
+    cmp rax, 0
+    jl error_open
+    mov r12, rax
+
+    ;write file
+    mov rax,1 ;SYS_write
+    mov rdi, r12
+    mov rsi, xor_output
+    mov rdx, [buffer_len]
+    syscall
+    mov [buffer_len], rax
+    cmp rax, 0
+    jl error_read
+    mov r13, rax
+
+    ;close file
+    mov rax, 3 ;SYS_close
+    mov rdi, r12
+    syscall
+
+
+generated_success:
+    mov rsi, msg_reading_file
+    mov rdx, 25
+    call Sys_write
+
+    mov rsi, msg_generating_file
+    mov rdx, 29
+    call Sys_write
+
+    mov rsi, msg_decrypt_generated
+    mov rdx, 24
+    call Sys_write
+
 exit:
     mov rax, 60 ;SYS_exit 
     mov rdi, 0  
     syscall
 
-printString:
-    push rbx 
-    mov rbx, rdi 
-    mov rdx, 0
-
-strCountLoop: 
-    cmp byte [rbx], NULL
-    je strCountDone 
-    inc rdx 
-    inc rbx 
-    jmp strCountLoop
-
-strCountDone: 
-    cmp rdx, 0  
-    je strPrintDone
+Sys_write:
     mov rax, 1 ;SYS_write 
-    mov rsi, rdi 
-    mov rdi, 1 ;STDOUT 
-    syscall 
-strPrintDone:
-    pop rbx
-    ret 
+    mov rdi, 1 ;SYSOUT
+    syscall
+    ret
+Sys_read:
+    mov rax, 0 ;SYS_read 
+    mov rdi, 0 ;STDIN 
+    mov rdx, 100  
+    syscall
+    ret
+
+remove_newline:
+    cmp byte [rcx], 10  ; Is last character \n?
+    je set_null
+    cmp byte [rcx], 0   
+    je remove_newline_done
+    inc rcx
+    jmp remove_newline
+set_null:
+    mov byte [rcx], 0
+remove_newline_done:
+    ret
+
 error_open:
     mov rax,1 ;SYS_write
     mov rdi,1 ;STDOUT
