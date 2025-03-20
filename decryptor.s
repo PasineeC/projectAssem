@@ -3,10 +3,7 @@ global _start
 section .data
     LF equ 10 
     NULL equ 0
-    text1 db "hello", 0
-    text2 db "Cat", 0
-    len1 equ $-text1
-    len2 equ $-text2
+
     
     msg_input_file db "Enter input file name: ", 0
     msg_output_file db "Enter output file name: ", 0
