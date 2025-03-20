@@ -3,7 +3,6 @@ global _start
 section .data
     LF equ 10 
     NULL equ 0
-
     
     msg_input_file db "Enter input file name: ", 0
     msg_output_file db "Enter output file name: ", 0
@@ -16,11 +15,11 @@ section .data
     newLine db LF, NULL
 
 section .bss 
-    filename resb 100        
-    output_filename resb 100 
+    filename resb 255        
+    output_filename resb 255
     key resb 4    
-    buffer resb 100 
-    xor_output resb 100    
+    buffer resb 255
+    xor_output resb 255   
     buffer_len resq 1
     key_len resq 1
 
@@ -71,6 +70,9 @@ get_output_file:
 
     mov rsi, output_filename
     call Sys_read
+
+    mov rcx, output_filename
+    call remove_newline
 
 get_key:
     mov rsi, msg_key
@@ -165,7 +167,7 @@ Sys_write:
 Sys_read:
     mov rax, 0 ;SYS_read 
     mov rdi, 0 ;STDIN 
-    mov rdx, 100  
+    mov rdx, 255  
     syscall
     ret
 

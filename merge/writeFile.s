@@ -1,11 +1,19 @@
+section .data
+    msg_open_error db "Error: cannot open file", 10, 0
+    msg_read_error db "Error: Cannot read file", 10, 0
+
+extern output_filename
+extern xor_output 
+extern buffer_len
+
 section .text
-    global write_output_file:
-global _start
+global write_output_file
+
 write_output_file:
     ;open file
     mov rax, 85 ;SYS_create
     mov rdi, output_filename
-    mov rsi, 00400q ;S_IRUSR
+    mov rsi, 00400q ; allow read/write
     syscall
     cmp rax, 0
     jl error_open
@@ -26,6 +34,8 @@ write_output_file:
     mov rax, 3 ;SYS_close
     mov rdi, r12
     syscall
+
+    ret 
 error_open:
     mov rax,1 ;SYS_write
     mov rdi,1 ;STDOUT
@@ -40,3 +50,7 @@ error_read:
     mov rdx, 26
     syscall 
     jmp exit
+exit:
+    mov rax, 60 ;SYS_exit 
+    mov rdi, 0  
+    syscall
