@@ -13,7 +13,7 @@ write_output_file:
     ;open file
     mov rax, 85 ;SYS_create
     mov rdi, output_filename
-    mov rsi, 00400q ; allow read/write
+    mov rsi, 0644o ; allow read/write
     syscall
     cmp rax, 0
     jl error_open

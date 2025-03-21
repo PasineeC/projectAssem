@@ -39,6 +39,9 @@ get_output_file:
     mov rsi, output_filename
     call Sys_read
 
+    mov rcx, output_filename
+    call remove_newline
+
 get_key:
     mov rsi, msg_key
     mov rdx, 32
